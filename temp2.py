@@ -43,31 +43,24 @@ def test2():
     QgsApplication.exitQgis()
     return vlayer
 
-vlayer=test2()
+app = QApplication(sys.argv)
+QgsApplication.setPrefixPath(os.environ['QGIS_PREFIX_PATH'], True)
+QgsApplication.initQgis()
 
-def test():
-    app = QApplication(sys.argv)
-    QgsApplication.setPrefixPath(os.environ['QGIS_PREFIX_PATH'], True)
-    QgsApplication.initQgis()
+shpfile="Y:\\HUCs\\HUC4_main_data.shp"
+tiffile="Y:\\SRTM\\srtm_01_02\\srtm_01_02.tif"
 
-    shpfile="Y:\\HUCs\\HUC4_main_data.shp"
-    tiffile="Y:\\SRTM\\srtm_01_02\\srtm_01_02.tif"
+vlayer = QgsVectorLayer(shpfile, "HUC4", "ogr")
+fileInfo = QFileInfo(tiffile)
+baseName = fileInfo.baseName()
+rlayer = QgsRasterLayer(tiffile, baseName)
 
-    vlayer = QgsVectorLayer(shpfile, "HUC4", "ogr")
-    fileInfo = QFileInfo(tiffile)
-    baseName = fileInfo.baseName()
-    rlayer = QgsRasterLayer(tiffile, baseName)
-
-    viewer = MapViewer(vlayer)
+viewer = MapViewer(vlayer)
 
 
-    viewer.show()
+viewer.show()
 
-    app.exec_()
+app.exec_()
 
-    QgsApplication.exitQgis()
+QgsApplication.exitQgis()
 
-    registry = QgsProviderRegistry.instance()
-    provider = registry.provider("ogr", "Y:\\HUCs\\HUC4_main_data.shp")
-
-test()

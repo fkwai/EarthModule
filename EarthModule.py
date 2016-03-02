@@ -1,39 +1,67 @@
-from PyQt4.QtCore import *
-from PyQt4.QtGui import *
-from qgis.core import *
-from qgis.gui import *
+import os,sys
+from osgeo import gdal, gdalnumeric, ogr, osr
+import numpy,scipy
+from datetime import date
+import bisect
 
-class EarthObj_vector(object):
+print("loading Earth Module")
+
+class daf():
+    pass
+
+
+class EarthObj_raster():
     name=[]
+    dataset_GDAL=[]
+
+    fieldList=[]
+    data={}
+    time={}
+
     def __init__(self,name,geofile):
         self.name=name
+        self.dataset_GDAL = gdal.Open(geofile)
 
-class EarthObj_vector(object):
+    def addDataRaster(self,raster,field,date=0):
+        ds = gdal.Open(raster)
+
+        # check geospatial information here
+
+        temp = numpy.array(ds.GetRasterBand(1).ReadAsArray())
+        if field in self.fieldList:
+            datelist=self.time[field]
+            ind=bisect.bisect(datelist,date)
+            if self.data[field].ndim==2:
+                self.data[field]=self.data[field][:,:,numpy.newaxis]
+            datatemp=numpy.insert(self.data[field],ind,temp,axis=2)
+            self.data[field]=datatemp
+            self.time[field].insert(ind,date)
+
+        else:
+            self.data[field]=temp
+            self.time[field]=[date]
+            self.fieldList.append(field)
+
+
+class EarthObj_vector():
     name=[]
     ID=[]
-    def __init__(self,name,geofile):
+    layer_OGR=[]
+    geomtype=[]
+    nfeature=[]
+
+    field=[]
+    data={}
+    time={}
+
+    def __init__(self,name,geofile,IDfield):
         self.name=name
-        vlayer = QgsVectorLayer(geofile,name,"ogr")
+        shapef = ogr.Open(geofile)
+        layer=shapef.GetLayer(os.path.split(os.path.splitext(geofile)[0])[1])
+        self.layer_OGR=layer
+        self.nfeature = layer.GetFeatureCount()
+        self.geomtype=layer.GetGeomType()
 
-
-
-class Map(QMainWindow):
-    def __init__(self, layer):
-        QMainWindow.__init__(self)
-        self.setWindowTitle("Map Viewer")
-
-        canvas = QgsMapCanvas()
-        canvas.useImageToRender(False)
-        canvas.setCanvasColor(Qt.white)
-        canvas.show()
-
-        QgsMapLayerRegistry.instance().addMapLayer(layer)
-        canvas.setExtent(layer.extent())
-        canvas.setLayerSet([QgsMapCanvasLayer(layer)])
-
-        layout = QVBoxLayout()
-        layout.addWidget(canvas)
-
-        contents = QWidget()
-        contents.setLayout(layout)
-        self.setCentralWidget(contents)
+        for i in range(self.nfeature):
+            feature = layer.GetFeature(i)
+            self.ID.append(feature.GetField(IDfield))
