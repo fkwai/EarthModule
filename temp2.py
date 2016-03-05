@@ -1,73 +1,52 @@
 from osgeo import gdal, gdalnumeric, ogr, osr
-import Image, ImageDraw
+from EarthModule import *
+import gdal_merge
 import numpy
-import EarthModule
-gdal.UseExceptions()
+import matplotlib.pyplot as plt
+
+file1=r"Y:\NED\n24w107\imgn24w107_1.img"
+file2=r"Y:\NED\n25w107\imgn25w107_1.img"
+file3=r"Y:\NED\n24w106\imgn24w106_1.img"
+fileList=[file1,file2,file3]
+
+obj1=EarthObj_raster(geofile=file1,field="NED")
+obj2=EarthObj_raster(geofile=file2,field="NED")
+obj3=EarthObj_raster(geofile=file3,field="NED")
+
+plt.imshow(obj1.getData("NED"))
+
+objList=[obj1,obj2,obj3]
+
+x1t,x2t,y1t,y2t=objList[0].getBoundingBox()
+x1,x2,y1,y2=x1t,x2t,y1t,y2t
+for obj in objList:
+    x1t,x2t,y1t,y2t=obj.getBoundingBox()
+    x1 = min(x1,x1t)
+    y1 = max(y1,y1t)
+    x2 = max(x2,x2t)
+    y2 = min(y2,y2t)
+dx,dy=objList[0].getDxDy()
+geotransform=[x1,dx,0,y1,0,dy]
+projection=obj1.getProjection()
+
+nx=int(numpy.ceil((x2-x1)/dx))
+ny=int(numpy.ceil((y2-y1)/dy))
+
+dataMerge=numpy.zeros([ny,nx])*numpy.nan
+for obj in objList:
+    x1t,x2t,y1t,y2t=obj.getBoundingBox()
+    indx1=int(numpy.round((x1t-x1)/dx))
+    indx2=int(numpy.round((x2t-x1)/dx))
+    indy1=int(numpy.round((y1t-y1)/dy))
+    indy2=int(numpy.round((y2t-y1)/dy))
+    data=None
+    data=obj.getData(field="NED")[:]
+
+    dataMerge[indy1:indy2,indx1:indx2]=data
+
+objMerge=EarthModule.EarthObj_raster(field="NED",geoProjection=projection,
+                                     geoTransform=geotransform,data=dataMerge)
+objMerge.writeTiff(outfile="out5.tif",field="NED")
 
 
-def imageToArray(i):
-    a=gdalnumeric.fromstring(i.tostring(),'b')
-    a.shape=i.im.size[1], i.im.size[0]
-    return a
 
-def arrayToImage(a):
-    i=Image.fromstring('L',(a.shape[1],a.shape[0]),
-            (a.astype('b')).tostring())
-    return i
-
-def world2Pixel(geoMatrix, x, y):
-  ulX = geoMatrix[0]
-  ulY = geoMatrix[3]
-  xDist = geoMatrix[1]
-  yDist = geoMatrix[5]
-  rtnX = geoMatrix[2]
-  rtnY = geoMatrix[4]
-  pixel = int((x - ulX) / xDist)
-  line = int((ulY - y) / xDist)
-  return (pixel, line)
-
-raster_path=r"Y:\GRACE\geotiff\CLM4.LEAKAGE_ERROR.DS.G300KM.RL05.DSTvSCS1409.tif"
-shapefile_path=r"Y:\HUCs\HUC4_main_data_proj.shp"
-
-shpfile=r"Y:\HUCs\HUC4_main_data_proj.shp"
-vectorObj=EarthModule.EarthObj_vector("HUC4",shpfile,"HUC4")
-
-tiffile=r"Y:\SRTM\srtm_19_06\srtm_19_06.tif"
-rasterObj=EarthModule.EarthObj_raster("SRTM",tiffile,field="DEM")
-
-geoTrans = rasterObj.geoTransform
-srcArray = rasterObj.data["DEM"]
-poly=vectorObj.geometry[2]
-
-minX, maxX, minY, maxY = poly.GetEnvelope()
-ulX, ulY = world2Pixel(geoTrans, minX, maxY)
-lrX, lrY = world2Pixel(geoTrans, maxX, minY)
-
-pxWidth = int(lrX - ulX)
-pxHeight = int(lrY - ulY)
-
-clip = srcArray[ulY:lrY, ulX:lrX]
-
-geoTrans = list(geoTrans)
-geoTrans[0] = minX
-geoTrans[3] = maxY
-
-points = []
-pixels = []
-pts = poly.GetGeometryRef(0)
-for p in range(pts.GetPointCount()):
-    points.append((pts.GetX(p), pts.GetY(p)))
-for p in points:
-    pixels.append(world2Pixel(geoTrans, p[0], p[1]))
-rasterPoly = Image.new("L", (pxWidth, pxHeight), 1)
-rasterize = ImageDraw.Draw(rasterPoly)
-rasterize.polygon(pixels, 0)
-mask = imageToArray(rasterPoly)
-
-# Clip the image using the mask
-clip = gdalnumeric.choose(mask,(clip, 0))
-
-output=numpy.zeros(srcArray.shape)*float("nan")
-output[ulY:lrY, ulX:lrX]=clip
-
-gdal.ErrorReset()

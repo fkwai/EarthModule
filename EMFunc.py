@@ -26,7 +26,6 @@ def world2Pixel(geoMatrix, x, y):
   return (pixel, line)
 
 def clip(poly,geoTrans,srcArray):
-
     minX, maxX, minY, maxY = poly.GetEnvelope()
     ulX, ulY = world2Pixel(geoTrans, minX, maxY)
     lrX, lrY = world2Pixel(geoTrans, maxX, minY)
