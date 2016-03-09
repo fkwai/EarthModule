@@ -1,52 +1,34 @@
 from osgeo import gdal, gdalnumeric, ogr, osr
-from EarthModule import *
-import gdal_merge
-import numpy
+import EarthModule
 import matplotlib.pyplot as plt
+import numpy
+import geopy.distance
+import time
 
-file1=r"Y:\NED\n24w107\imgn24w107_1.img"
-file2=r"Y:\NED\n25w107\imgn25w107_1.img"
-file3=r"Y:\NED\n24w106\imgn24w106_1.img"
-fileList=[file1,file2,file3]
+file1=r"Y:\NED\n26w102\imgn26w102_1.img"
 
-obj1=EarthObj_raster(geofile=file1,field="NED")
-obj2=EarthObj_raster(geofile=file2,field="NED")
-obj3=EarthObj_raster(geofile=file3,field="NED")
+obj1=EarthModule.EarthObj_raster(geofile=file1,field="NED",name="f1")
 
-plt.imshow(obj1.getData("NED"))
+#plt.imshow(obj1.getData("NED"))
 
-objList=[obj1,obj2,obj3]
+data=obj1.getData("NED")
+gradx,grady=numpy.gradient(data)
 
-x1t,x2t,y1t,y2t=objList[0].getBoundingBox()
-x1,x2,y1,y2=x1t,x2t,y1t,y2t
-for obj in objList:
-    x1t,x2t,y1t,y2t=obj.getBoundingBox()
-    x1 = min(x1,x1t)
-    y1 = max(y1,y1t)
-    x2 = max(x2,x2t)
-    y2 = min(y2,y2t)
-dx,dy=objList[0].getDxDy()
-geotransform=[x1,dx,0,y1,0,dy]
-projection=obj1.getProjection()
+x1,x2,y1,y2=obj1.getBoundingBox()
+dx,dy=obj1.getDxDy()
+nx,ny=obj1.getNxNy()
+xx=numpy.linspace(x1+dx,x2-dx,nx)
+yy=numpy.linspace(y1+dy,y2-dy,ny)
 
-nx=int(numpy.ceil((x2-x1)/dx))
-ny=int(numpy.ceil((y2-y1)/dy))
+dmx=numpy.zeros([1,ny])
+dmy=numpy.zeros([1,ny])
+for i in range(ny):
+    dmx[0,i]=geopy.distance.vincenty((yy[i],xx[0]),(yy[i],xx[0]+dx)).meters
+    dmy[0,i]=geopy.distance.vincenty((yy[i]+dy/2,xx[0]),(yy[i]-dy/2,xx[0])).meters
 
-dataMerge=numpy.zeros([ny,nx])*numpy.nan
-for obj in objList:
-    x1t,x2t,y1t,y2t=obj.getBoundingBox()
-    indx1=int(numpy.round((x1t-x1)/dx))
-    indx2=int(numpy.round((x2t-x1)/dx))
-    indy1=int(numpy.round((y1t-y1)/dy))
-    indy2=int(numpy.round((y2t-y1)/dy))
-    data=None
-    data=obj.getData(field="NED")[:]
+gradmx=gradx/dmx
+gradmy=grady/dmy
 
-    dataMerge[indy1:indy2,indx1:indx2]=data
-
-objMerge=EarthModule.EarthObj_raster(field="NED",geoProjection=projection,
-                                     geoTransform=geotransform,data=dataMerge)
-objMerge.writeTiff(outfile="out5.tif",field="NED")
-
-
+sp=numpy.sqrt(gradmx**2+gradmy**2)
+slope=numpy.arctan(numpy.sqrt(gradmx**2+gradmy**2))/numpy.pi*180
 

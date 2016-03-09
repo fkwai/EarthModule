@@ -4,8 +4,8 @@ import EMFunc,EMDataset
 import numpy
 import pickle
 
-shpfile=r"Y:\HUCs\HUC4_main_data_proj.shp"
-HUCObj=EarthModule.EarthObj_vector(name="HUC4",geofile=shpfile,IDfield="HUC4")
+shpfile=r"Y:\ggII\MasterList\ggIIstr_shape.shp"
+ggIIobj=EarthModule.EarthObj_vector(name="ggII",geofile=shpfile,IDfield="SITE_NO")
 #
 # tiffile=r"Y:\GRACE\geotiff\CLM4.LEAKAGE_ERROR.DS.G300KM.RL05.DSTvSCS1409.tif"
 # outRaster=r"Y:\GRACE\geotiff\GRACEref.tif"
@@ -21,7 +21,7 @@ HUCObj=EarthModule.EarthObj_vector(name="HUC4",geofile=shpfile,IDfield="HUC4")
 #     date=datetime.datetime.strptime(str(datestr),"%Y%m%d").date()
 #     GRACEobj.addDataRaster(file,"GRACE",date)
 
-NEDfile,indNorth,indWest=EMDataset.NEDindex(HUCObj,NEDpath=r"Y:\NED")
+NEDfile,indNorth,indWest=EMDataset.NEDindex(ggIIobj,NEDpath=r"Y:\NED")
 n=len(NEDfile)
 ElevMean=[numpy.nan]*n
 ElevStd=[numpy.nan]*n
@@ -46,7 +46,7 @@ for i in range(len(NEDfile)):
         print("merge data cost %f"%(t2-t1))
 
         t1=time.clock()
-        poly=HUCObj.getGeometry()[i]
+        poly=ggIIobj.getGeometry()[i]
         clipObj,maskObj=EMFunc.clip(poly=poly,rasterObj=mergeObj,field="NED")
         t2=time.clock()
         print("clip data cost %f"%(t2-t1))
@@ -66,7 +66,7 @@ for i in range(len(NEDfile)):
     except:
         errorBasin.append(i)
 
-EMFunc.writeCSV("DEM_HUC4.csv",[HUCObj.getID(),ElevMean,ElevStd,SlopeMean,SlopeStd])
+EMFunc.writeCSV("DEM_ggII.csv",[ggIIobj.getID(),ElevMean,ElevStd,SlopeMean,SlopeStd])
 
 
     # clipObj.writeTiff(outfile="out.tif",field="NED")
@@ -74,8 +74,8 @@ EMFunc.writeCSV("DEM_HUC4.csv",[HUCObj.getID(),ElevMean,ElevStd,SlopeMean,SlopeS
     # clipObj.writeTiff(outfile="out_slope.tif",field="slope")
 
 #NLCD
-shpfile=r"Y:\HUCs\HUC4_prj_NLCD.shp"
-HUCObj=EarthModule.EarthObj_vector(name="HUC4",geofile=shpfile,IDfield="HUC4")
+shpfile=r"Y:\ggII\MasterList\ggII_NLCD_prj.shp"
+ggIIobj=EarthModule.EarthObj_vector(name="ggII",geofile=shpfile,IDfield="SITE_NO")
 NLCDfile=r"Y:\NLCD\nlcd_2011_landcover_2011_edition_2014_10_10\nlcd_2011_landcover_2011_edition_2014_10_10.img"
 
 t1=time.clock()
@@ -83,12 +83,13 @@ NLCDobj=EarthModule.EarthObj_raster(geofile=NLCDfile,field="NLCD",optNan=0)
 t2=time.clock()
 print("read data cost %f"%(t2-t1))
 
-purban=[]
-pforest=[]
-for i in range(len(HUCObj.getGeometry())):
+n=len(ggIIobj.getGeometry())
+purban=[numpy.nan]*n
+pforest=[numpy.nan]*n
+for i in range(len(ggIIobj.getGeometry())):
     print("basin %i:"%(i+1))
     t1=time.clock()
-    poly=HUCObj.getGeometry()[i]
+    poly=ggIIobj.getGeometry()[i]
     clipNLCDObj,maskNLCDObj=EMFunc.clip(poly=poly,rasterObj=NLCDobj,field="NLCD",vNan=0)
     t2=time.clock()
     print("clip data cost %f"%(t2-t1))
@@ -100,4 +101,5 @@ for i in range(len(HUCObj.getGeometry())):
     purban.append(nurban/n)
     pforest.append(nforest/n)
 
-EMFunc.writeCSV("NLCD_HUC4.csv",[HUCObj.getID(),purban,pforest])
+EMFunc.writeCSV("NLCD_ggII.csv",[ggIIobj.getID(),purban,pforest])
+

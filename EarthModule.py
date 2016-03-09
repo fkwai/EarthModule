@@ -11,34 +11,39 @@ class daf():
 
 
 class EarthObj_raster():
-    __name=None
-    __geoTransform=None
-    __geoProjection=None
-    __nx=None
-    __ny=None
-
-    __fieldList=[]
-    __data={}
-    __time={}
-
     def __init__(self,geofile=None,name=None,field=None,date=0,
-                 geoProjection=None,geoTransform=None,data=None):
+                 geoProjection=None,geoTransform=None,data=None,
+                 isGRACE=0,optNan=1):
         '''
         init 1: from geofile
         init 2: from geoProjection,geoTransform,data
         option: field(intial input data as field),name, date
         '''
-        temp=[]
+
+        #initial variables
+        self.__data={}
+        self.__time={}
+        self.__fieldList=[]
         self.__name=name
+
+        self.__name=None
+        self.__geoTransform=None
+        self.__geoProjection=None
+        self.__nx=None
+        self.__ny=None
+
         if geofile is not None:
             ds = gdal.Open(geofile)
             self.__geoProjection=ds.GetProjection()
             self.__geoTransform=ds.GetGeoTransform()
             # self.RasterXSize=ds.RasterXSize   so dangerous!!!
             # self.RasterYSize=ds.RasterYSize
-            temp = numpy.array(ds.GetRasterBand(1).ReadAsArray())
-            nanvalue=ds.GetRasterBand(1).GetNoDataValue()
-            temp[numpy.where(temp==nanvalue)]=numpy.nan
+            if optNan==0:
+                temp = numpy.array(ds.GetRasterBand(1).ReadAsArray())
+            else:
+                temp = numpy.array(ds.GetRasterBand(1).ReadAsArray()).astype(float)
+                nanvalue=ds.GetRasterBand(1).GetNoDataValue()
+                temp[numpy.where(temp==nanvalue)]=numpy.nan
         elif (geoProjection is not None) \
                 and (geoTransform is not None) \
                 and (data is not None):
@@ -49,42 +54,46 @@ class EarthObj_raster():
             ny,nx=temp.shape
             self.__nx=nx
             self.__ny=ny
-            self.__data[field]=temp[:]
-            self.__time[field]=[date]
-            self.__fieldList.append(field)
+            self.addData(temp,field,date,isGRACE)
 
     def addDataRaster(self,raster,field,date=0,isGRACE=0):
         ds = gdal.Open(raster)
         # check geospatial information here
-        temp = numpy.array(ds.GetRasterBand(1).ReadAsArray())
+        temp = numpy.array(ds.GetRasterBand(1).ReadAsArray()).astype(float)
         nanvalue=ds.GetRasterBand(1).GetNoDataValue()
         temp[numpy.where(temp==nanvalue)]=numpy.nan
+        self.addData(self,temp,field,date,isGRACE)
+
+
+    def addData(self,data,field,date=0,isGRACE=0):
         if isGRACE:
-            temp=numpy.concatenate((temp[:,180:360],temp[:,0:180]),axis=1)
+            data=numpy.concatenate((data[:,180:360],data[:,0:180]),axis=1)
         if field in self.__fieldList:
             datelist=self.__time[field]
             ind=bisect.bisect(datelist,date)
             if self.__data[field].ndim==2:
                 self.__data[field]=self.__data[field][:,:,numpy.newaxis]
-            datatemp=numpy.insert(self.__data[field],ind,temp,axis=2)
+            datatemp=numpy.insert(self.__data[field],ind,data,axis=2)
             self.__data[field]=datatemp
             self.__time[field].insert(ind,date)
         else:
-            self.__data[field]=temp
+            self.__data[field]=data
             self.__time[field]=[date]
             self.__fieldList.append(field)
 
-    def getData(self,field=None):
+    def getData(self,field=None,date=0):
         if field is None:
             return self.__data
         else:
             return self.__data[field]
+            # use date later
 
     def getTime(self,field=None):
         if field is None:
             return self.__time
         else:
             return self.__time[field]
+
     def getProjection(self):
         return self.__geoProjection
 
@@ -117,33 +126,58 @@ class EarthObj_raster():
         dy = self.__geoTransform[5]
         return dx,dy
 
+    def getNxNy(self):
+        nx = self.__nx
+        ny = self.__ny
+        return nx,ny
+
 
 class EarthObj_vector():
-    name=[]
-    ID=[]
-    feature=[]
-    geometry=[]
-    spatialRef=[]
-    geometrytype=[]
-    nfeature=[]
+    def __init__(self,geofile=None,IDfield=None,name=None):
+        # initial variables
+        self.__data={}
+        self.__time={}
+        self.__fieldList=[]
+        self.__name=name
 
-    field=[]
-    data={}
-    time={}
+        self.__ID=[]
+        self.__feature=[]
+        self.__geometry=[]
+        self.__spatialRef=None
+        self.__geometrytype=None
+        self.__nfeature=None
 
-    def __init__(self,geofile,IDfield,name=[]):
-        self.name=name
         shapef = ogr.Open(geofile)
         layer=shapef.GetLayer(os.path.split(os.path.splitext(geofile)[0])[1])
-        self.nfeature = layer.GetFeatureCount()
-        self.geometrytype=layer.GetGeomType()
-        self.spatialRef=layer.GetSpatialRef()
-        for i in range(self.nfeature):
+        self.__nfeature = layer.GetFeatureCount()
+        self.__geometrytype=layer.GetGeomType()
+        self.__spatialRef=layer.GetSpatialRef()
+        for i in range(self.__nfeature):
             feature = layer.GetFeature(i)
             geometry=feature.geometry()
-            self.feature.append(feature)
-            self.geometry.append(geometry)
-            self.ID.append(int(feature.GetField(IDfield)))
+            self.__feature.append(feature)
+            self.__geometry.append(geometry)
+            self.__ID.append(int(feature.GetField(IDfield)))
+
+    def getData(self,field=None):
+        if field is None:
+            return self.__data
+        else:
+            return self.__data[field]
+
+    def getTime(self,field=None):
+        if field is None:
+            return self.__time
+        else:
+            return self.__time[field]
+    def getID(self):
+        return self.__ID
+    def getSpatialRef(self):
+        return self.__spatialRef
+    def getGeometry(self):
+        return self.__geometry
+    def getFeature(self):
+        return self.__feature
 
 def writeGRACEReftiff(filename,outRaster):
     # GRACE is from 0 - 360.. write an empty tiff from -180 - 180
