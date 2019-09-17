@@ -1,4 +1,3 @@
-from IPython.display import HTML
 import tensorflow as tf
 import ee
 import folium

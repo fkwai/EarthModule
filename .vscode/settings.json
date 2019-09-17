@@ -1,3 +1,5 @@
 {
-    "python.pythonPath": "/home/kxf227/anaconda3/envs/tensorflow/bin/python"
+    "python.pythonPath": "C:\\Users\\geofk\\Anaconda3\\envs\\tensorFlow\\python.exe",
+    "python.linting.enabled": true,
+    "python.formatting.provider": "yapf"
 }
