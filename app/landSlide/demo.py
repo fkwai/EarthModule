@@ -21,3 +21,21 @@ folium.TileLayer(
 map.add_child(folium.LayerControl())
 map.save('map.html')
 webbrowser.open('map.html')
+
+# Change the following two lines to use your own training data.
+labels = ee.FeatureCollection('projects/google/demo_landcover_labels')
+label = 'landcover'
+
+# Sample the image at the points and add a random column.
+sample = image.sampleRegions(
+  collection=labels, properties=[label], scale=30).randomColumn()
+
+# Partition the sample approximately 70-30.
+training = sample.filter(ee.Filter.lt('random', 0.7))
+testing = sample.filter(ee.Filter.gte('random', 0.7))
+
+from pprint import pprint
+
+# Print the first couple points to verify.
+pprint({'training': training.first().getInfo()})
+pprint({'testing': testing.first().getInfo()})
