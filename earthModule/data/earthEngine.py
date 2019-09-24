@@ -22,7 +22,7 @@ def col2lst(imageCol, nImage=None):
     if nImage is None:
         nImage = imageCol.size().getInfo()
     imageLst = imageCol.toList(nImage)
-    return imageLst
+    return imageLst, nImage
 
 
 def mapBound(imageCol, bb, nImage=None, **kw):
@@ -43,12 +43,14 @@ def mapBound(imageCol, bb, nImage=None, **kw):
 
 def exportDrive(imageCol, folder, nImage=None):
     taskLst = list()
-    imageLst = col2lst(imageCol, nImage=None)
+    imageLst, nImage = col2lst(imageCol, nImage=None)
     for k in range(nImage):
-        print('working on image '+str(k), end='\r')
+        print('\t working on image '+str(k), end='\r')
         image = ee.Image(imageLst.get(k))
-        task = ee.batch.Export.image.toDrive(
-            image=image, folder=folder, fileNamePrefix=image.date().format('yyyyMMdd').getInfo())
+        task = ee.batch.Export.image.toCloudStorage(
+            image=image, bucket='deepldb',
+            fileNamePrefix=folder+'/'+image.date().format('yyyyMMdd').getInfo()
+        )
         task.start()
     return taskLst
 

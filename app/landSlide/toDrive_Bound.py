@@ -25,4 +25,4 @@ imageCol = ee.ImageCollection("LANDSAT/LE07/C01/T1_SR").filterDate(
         geeUtils.bb2ee(bb)).select('B[1-7]').sort('system:time_start').map(mapFunc)
 
 
-taskLst = earthEngine.exportDrive(imageCol, 'landSat')
+taskLst = earthEngine.exportDrive(imageCol, 'landSat/'+folderName)
