@@ -1,7 +1,7 @@
 import pandas as pd
 import ee
 import earthModule
-from earthModule.data import landSlide, geeUtils
+from earthModule.data import landSlide, geeUtils, earthEngine
 import datetime
 import time
 import os
@@ -31,18 +31,10 @@ for k in range(nSite):
     t2 = dateLst[k]+datetime.timedelta(days=nDay)
 
     imageCol = ee.ImageCollection("LANDSAT/LE07/C01/T1_SR").filterDate(
-        geeUtils.t2ee(t1), geeUtils.t2ee(t2)).filterBounds(region).select(fieldLst).sort('system:time_start')
-    nImage = imageCol.size().getInfo()
-    imageLst = imageCol.toList(nImage)
-    df = pd.DataFrame(columns=['date']+fieldLst)
-    for kk in range(nImage):
-        print('\t Total image {} working on {}'.format(nImage, kk), end='\r')
-        image = ee.Image(imageLst.get(kk))
-        temp = image.reduceRegion(ee.Reducer.mean(), region).getInfo()
-        tstr = image.date().format('yyyy-MM-dd').getInfo()
-        temp['date'] = tstr
-        df=df.append(temp,ignore_index=True)
-    df.to_csv(os.path.join(saveFolder, saveName), index=False)
+        geeUtils.t2ee(t1), geeUtils.t2ee(t2)).filterBounds(region).select(fieldLst).sort('system:time_start')    
+    df = earthEngine.calRegion(imageCol, fieldLst, region)
+    savePath = os.path.join(saveFolder, saveName)
+    df.to_csv(savePath, index=False)
     tt = time.time()
-    print('\t Site {} time {:.3f} totle {:.3f}'.format(
+    print('\t Site {} time {:.3f} total {:.3f}'.format(
         k, tt-tt1, tt-tt0))
