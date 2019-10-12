@@ -119,7 +119,8 @@ map.add_child(folium.LayerControl())
 map.save('map.html')
 webbrowser.open('map.html')
 
-dimensions = ee.Dictionary(ee.List(ee.Dictionary(ee.Algorithms.Describe(arrays)).get('bands')).get(0)).get('dimensions')
+dimensions = ee.Dictionary(ee.List(ee.Dictionary(
+    ee.Algorithms.Describe(arrays)).get('bands')).get(0)).get('dimensions')
 
 
 ###################
@@ -150,6 +151,15 @@ evalPolysList = trainingPolys.toList(trainingPolys.size())
 # These numbers determined experimentally.
 n = 100  # Number of shards in each polygon.
 N = 2000  # Total sample size in each polygon.
+
+geomSample = ee.FeatureCollection([])
+sample = arrays.sample(
+    region=ee.Feature(trainingPolysList.get(0)).geometry(),
+    scale=30,
+    numPixels=N / n,  # Size of the shard.
+    seed=1,
+    tileScale=8
+)
 
 # Export all the training data (in many pieces), with one task
 # per geometry.
@@ -199,5 +209,3 @@ N = 2000  # Total sample size in each polygon.
 #       selectors=BANDS + [RESPONSE]
 #   )
 #   task.start()
-
-

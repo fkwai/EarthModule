@@ -24,6 +24,7 @@ fieldLst.append('pixel_qa')
 siteLst = list()
 
 tt0 = time.time()
+errLst=list()
 for k in range(nSite):
     tt1 = time.time()
     saveName = 'site{:04d}'.format(k)
@@ -33,9 +34,12 @@ for k in range(nSite):
 
     imageCol = ee.ImageCollection("LANDSAT/LE07/C01/T1_SR").filterDate(
         geeUtils.t2ee(t1), geeUtils.t2ee(t2)).filterBounds(point).select(fieldLst).sort('system:time_start')
-    df = earthEngine.calNeighbor(imageCol, fieldLst, point, kSize=nKernel)
-    savePath = os.path.join(saveFolder, saveName)
-    df.to_json(savePath)
+    try:
+        df = earthEngine.calNeighbor(imageCol, fieldLst, point, kSize=nKernel)    
+        savePath = os.path.join(saveFolder, saveName)
+        df.to_json(savePath)
+    except:
+        errLst.append(k)
     tt = time.time()
     print('\t Site {} time {:.3f} total {:.3f}'.format(
         k, tt-tt1, tt-tt0))

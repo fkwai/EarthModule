@@ -80,4 +80,5 @@ def calNeighbor(imageCol, fieldLst, point, scale=30, kSize=9):
     x = imageLst.getInfo()
     out = [dict(zip(x[0], values)) for values in x[1:]]
     df = pd.DataFrame(out)
-    return df
+    df['date'] = df['id'].str[-8:].astype(int)
+    return df[fieldLst+['date']]
