@@ -4,6 +4,7 @@ import ee
 import webbrowser
 import time
 import pandas as pd
+from . import geeUtils
 
 EE_TILES = 'https://earthengine.googleapis.com/map/{mapid}/{{z}}/{{x}}/{{y}}?token={token}'
 
@@ -26,7 +27,7 @@ def col2lst(imageCol, nImage=None):
 
 
 def mapBound(imageCol, bb, nImage=None, **kw):
-    imageLst = col2lst(imageCol, nImage=None)
+    imageLst, nImage = col2lst(imageCol)
     center = [(bb[0]+bb[2])/2, (bb[1]+bb[3])/2]
     bbMap = [bb[0], bb[1]], [bb[2], bb[3]]
     mm = folium.Map(location=center)
@@ -34,7 +35,7 @@ def mapBound(imageCol, bb, nImage=None, **kw):
     for k in range(nImage):
         print('\t working on image '+str(k), end='\r')
         image = ee.Image(imageLst.get(k))
-        addToMap(image, mm)
+        addToMap(image.clip(geeUtils.bb2ee(bb)), mm)
     mm.fit_bounds(bbMap)
     mm.add_child(folium.LayerControl())
     mm.save('map.html')
@@ -43,7 +44,7 @@ def mapBound(imageCol, bb, nImage=None, **kw):
 
 def exportDrive(imageCol, folder, nImage=None):
     taskLst = list()
-    imageLst, nImage = col2lst(imageCol, nImage=None)
+    imageLst, nImage = col2lst(imageCol, nImage)
     for k in range(nImage):
         print('\t working on image '+str(k), end='\r')
         image = ee.Image(imageLst.get(k))
@@ -56,13 +57,13 @@ def exportDrive(imageCol, folder, nImage=None):
 
 
 def calRegion(imageCol, fieldLst, region, nImage=None):
-    imageLst = col2lst(imageCol, nImage=None)
+    imageLst, nImage = col2lst(imageCol, nImage)
     df = pd.DataFrame(columns=['date']+fieldLst)
     for kk in range(nImage):
         print('\t Total image {} working on {}'.format(nImage, kk), end='\r')
         image = ee.Image(imageLst.get(kk))
         temp = image.reduceRegion(ee.Reducer.mean(), region).getInfo()
-        tstr = image.date().format('yyyy-MM-dd').getInfo()
+        tstr = image.date().format('yyyyMMdd').getInfo()
         temp['date'] = tstr
         df = df.append(temp, ignore_index=True)
     return df

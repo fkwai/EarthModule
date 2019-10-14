@@ -19,7 +19,7 @@ def mapFunc(image):
 
 imageCol = ee.ImageCollection("LANDSAT/LE07/C01/T1_SR").filterDate(
     geeUtils.t2ee(t1), geeUtils.t2ee(t2)).filterBounds(
-        geeUtils.bb2ee(bb)).select('B[1-7]').sort('system:time_start').map(mapFunc)
+        geeUtils.bb2ee(bb)).select('B[1-7]').sort('system:time_start')
 
-earthEngine.mapBound(imageCol, bb, nImage=5, bands=[
+earthEngine.mapBound(imageCol, bb, bands=[
     'B3', 'B2', 'B1'], min=0, max=1000)

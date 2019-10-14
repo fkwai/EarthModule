@@ -12,10 +12,9 @@ nKernel = 9
 nDay = 200
 
 saveFolder = os.path.join(
-    dirDB, 'conf8-kernal{:d}-day{:d}'.format(nKernel, nDay))
+    dirDB, 'conf8', 'Landsat7-kernal{:d}-day{:d}'.format(nKernel, nDay))
 if not os.path.exists(saveFolder):
     os.makedirs(saveFolder)
-
 
 latLst, lonLst, dateLst = landSlide.readTabInfo(tabFile=None)
 nSite = len(dateLst)
